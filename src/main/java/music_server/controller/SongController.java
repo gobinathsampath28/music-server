@@ -1,14 +1,14 @@
 package music_server.controller;
 
-import music_server.model.Playlist;
 import music_server.model.Song;
 import music_server.service.SongService;
-import org.springframework.core.io.Resource;
-import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.net.MalformedURLException;
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -17,26 +17,14 @@ public class SongController {
 
     private final SongService songService;
 
-    public SongController(
-            SongService songService) {
-
-        this.songService =
-                songService;
+    public SongController(SongService songService) {
+        this.songService = songService;
     }
-
-    // =========================
-    // ALL SONGS
-    // =========================
 
     @GetMapping
     public List<Song> getSongs() {
-
         return songService.getSongs();
     }
-
-    // =========================
-    // SEARCH
-    // =========================
 
     @GetMapping("/search")
     public List<Song> searchSongs(
@@ -44,10 +32,6 @@ public class SongController {
 
         return songService.searchSongs(q);
     }
-
-    // =========================
-    // FAVORITES
-    // =========================
 
     @GetMapping("/favorites")
     public List<Song> getFavoriteSongs() {
@@ -62,9 +46,13 @@ public class SongController {
         return songService.toggleFavorite(id);
     }
 
-    // =========================
-    // SYNC
-    // =========================
+    @PostMapping("/upload")
+    public Song uploadSong(
+            @RequestParam("file") MultipartFile file)
+            throws Exception {
+
+        return songService.uploadSong(file);
+    }
 
     @PostMapping("/sync")
     public ResponseEntity<String> syncSongs() {
@@ -76,25 +64,19 @@ public class SongController {
         );
     }
 
-    // =========================
-    // STREAM
-    // =========================
-
     @GetMapping("/{fileName}/stream")
-    public ResponseEntity<Resource> streamSong(
-            @PathVariable String fileName)
-            throws MalformedURLException {
+    public ResponseEntity<Void> streamSong(
+            @PathVariable String fileName) {
 
-        Resource resource =
-                songService
-                        .getSongResource(fileName);
+        String songUrl =
+                songService.getSongUrl(fileName);
 
-        return ResponseEntity.ok()
-                .contentType(
-                        MediaType.parseMediaType(
-                                "audio/mpeg"
-                        )
+        return ResponseEntity
+                .status(HttpStatus.FOUND)
+                .header(
+                        HttpHeaders.LOCATION,
+                        songUrl
                 )
-                .body(resource);
+                .build();
     }
 }
